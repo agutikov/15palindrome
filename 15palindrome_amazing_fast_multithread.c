@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <sys/syscall.h>
+#include <linux/membarrier.h>
 
 #include "15palindrome.h"
 
@@ -21,8 +23,15 @@
 #define TRACE(...) 
 #endif
 
+static int membarrier(int cmd, int flags)
+{
+        return syscall(__NR_membarrier, cmd, flags);
+}
+
 #if ENABLE_SW_MEMORY_BARRIER
-#define SW_MEM_BARRIER asm volatile("": : :"memory")
+// membarrier is faster 
+#define SW_MEM_BARRIER membarrier(MEMBARRIER_CMD_PRIVATE_EXPEDITED, 0)
+//#define SW_MEM_BARRIER asm volatile("": : :"memory")
 #else
 #define SW_MEM_BARRIER
 #endif
@@ -105,8 +114,7 @@ void switch_prime_buffer() {
         HW_MEM_BARRIER;
 }
 
-// sizeof(uint64_t) * 256 / 36 < 64
-__attribute__((aligned(4096))) char base36_buffer[2][PRIME_BUFFER_SIZE * 64]; 
+__attribute__((aligned(4096))) char base36_buffer[2][PRIME_BUFFER_SIZE * 10]; 
 __attribute__((aligned(64))) volatile char* base36_buffer_w = 0;
 __attribute__((aligned(64))) volatile const char* base36_buffer_r = 0;
 __attribute__((aligned(64))) volatile const char* base36_buffer_r_end = 0;
@@ -145,7 +153,7 @@ void* base36_routine(void* arg)
                         write_ptr += 14;
                 }
                 // do work
-                base36_buffer_r_end = base36_print_buffer(write_ptr, local_prime_buffer_r, PRIME_BUFFER_SIZE);
+                base36_buffer_r_end = write_ptr + base36_print_buffer_2(write_ptr, local_prime_buffer_r, PRIME_BUFFER_SIZE);;
                 // store tail of output for future use
                 // notice: double copy, first into temporary buffer then into output buffer
                 //         works faster than one copy after wait for search thread consumed previous batch
@@ -262,6 +270,8 @@ pthread_t base36_thread;
 
 int main(int argc, char **argv) {
         clock_t begin, end;
+
+        init_base36_r2();
 
         primesieve_init(&it);
 

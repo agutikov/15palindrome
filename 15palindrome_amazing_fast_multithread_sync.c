@@ -154,9 +154,8 @@ void* prime_gen_routine(void* arg)
                 buffer_count, buffer_count*PRIME_BUFFER_SIZE*sizeof(prime_buffer[0][0]), wait_count);
         return 0;
 }
-
-// sizeof(uint64_t) * 256 / 36 < 64
-char base36_buffer[2][PRIME_BUFFER_SIZE * 64]; 
+ 
+char base36_buffer[2][PRIME_BUFFER_SIZE * 10]; 
 
 volatile size_t base36_buffer_size[2] = {0};
 
