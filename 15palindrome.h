@@ -12,8 +12,15 @@ const char jump_table[36] = {
 static inline uint64_t fastmod36(uint64_t n)
 {
         const uint64_t c = UINT64_C(0xFFFFFFFFFFFFFFFF) / 36 + 1;
-        register uint64_t lowbits = c * n;
+        uint64_t lowbits = c * n;
         return ((__uint128_t)lowbits * 36) >> 64; 
+}
+
+static inline uint64_t fastmod1296(uint64_t n)
+{
+        const uint64_t c = UINT64_C(0xFFFFFFFFFFFFFFFF) / 1296 + 1;
+        uint64_t lowbits = c * n;
+        return ((__uint128_t)lowbits * 1296) >> 64;
 }
 
 char* base36_r(char *dest, uint64_t num)
@@ -37,6 +44,7 @@ char* base36_r2(char *dest, uint64_t num)
                 return base36_r(dest, num);
         }
         uint64_t y = num % 1296;
+        //uint64_t y = fastmod1296(num);
         uint64_t z = num / 1296;
         if (z > 0) {
                 dest = base36_r2(dest, z);

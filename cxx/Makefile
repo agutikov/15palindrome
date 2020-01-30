@@ -7,7 +7,7 @@ SEASTAR_PC := $(abspath $(SEASTAR_PATH)/build/release/seastar.pc)
 SEASTAR_CXX_FLAGS := $(shell export SEASTAR_PC="$(SEASTAR_PC)"; pkg-config --cflags --static ${SEASTAR_PC})
 SEASTAR_LD_FLAGS := $(shell export SEASTAR_PC="$(SEASTAR_PC)"; pkg-config --libs --static ${SEASTAR_PC})
 
-PROJ_DIR := $(abspath $(mkfile_di)/../)
+PROJ_DIR := $(abspath $(mkfile_dir)/../)
 
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -O3 -gdwarf-2 -D_GNU_SOURCE -I${PROJ_DIR} ${SEASTAR_CXX_FLAGS}
