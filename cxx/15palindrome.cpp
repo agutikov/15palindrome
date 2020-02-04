@@ -11,13 +11,14 @@ using namespace seastar;
 using namespace std::chrono_literals;
 
 
-#define BASE36_BUFFER_SIZE (4096*16)
+#define PRIME_BUFFER_SIZE (1024*256)
+#define BASE36_BUFFER_SIZE (PRIME_BUFFER_SIZE*10)
 
 
 future<> app_main() {
-        std::cout << smp::count << "\n";
+        std::cout << smp::count << std::endl;
 
-        init_base36_r2();
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
         int success = 0;
         ssize_t buffer_offset = 0; // for correct offset
@@ -25,20 +26,28 @@ future<> app_main() {
 
         primesieve_iterator it;
         primesieve_init(&it);
+        uint64_t prime_buffer[PRIME_BUFFER_SIZE];
         char base36_buffer[BASE36_BUFFER_SIZE];
         char* ptr = base36_buffer;
 
+        init_base36_r2();
+
         while(1) {
-                while(ptr < (base36_buffer + sizeof(base36_buffer) - 16)) {
-                        uint64_t prime = primesieve_next_prime(&it);
-                        ptr = base36_r2(ptr, prime);
+                for (size_t i = 0; i < sizeof(prime_buffer)/sizeof(prime_buffer[0]); i++) {
+                        prime_buffer[i] = primesieve_next_prime(&it);
                 }
+                
+                for (size_t i = 0; i < sizeof(prime_buffer)/sizeof(prime_buffer[0]); i++) {
+                        ptr = base36_r2(ptr, prime_buffer[i]);
+                }
+
                 buffer_offset = search_15_palindrome(base36_buffer, ptr);
                 if (buffer_offset >= 0) {
                         total_offset += buffer_offset;
                         success = 1;    
                         break;
                 }
+
                 total_offset += ptr - base36_buffer - 14;
                 memcpy(base36_buffer, ptr-14, 14);
                 ptr = base36_buffer + 14;
@@ -57,13 +66,14 @@ future<> app_main() {
                 printf("Can't find palindrome\n");
         }
 
+        printf("chrono elapsed: %lf ms\n",
+                std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(std::chrono::steady_clock::now() - begin).count());
+
         return seastar::make_ready_future<>();
 }
 
-int main(int argc, char** argv) {
-        clock_t clock_begin = clock();
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
+int main(int argc, char** argv) {
         app_template app;
         try {
                 app.run(argc, argv, app_main);
@@ -71,9 +81,5 @@ int main(int argc, char** argv) {
                 std::cerr << "Couldn't start application: " << e.what() << "\n";
                 return 1;
         }
-
-        printf("clock elapsed: %lf ms\n", (double) (clock() - clock_begin) * 1000 / CLOCKS_PER_SEC);
-        printf("chrono elapsed: %lf ms\n",
-                std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(std::chrono::steady_clock::now() - begin).count());
 }
 
