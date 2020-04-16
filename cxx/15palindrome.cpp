@@ -96,9 +96,48 @@ future<> app_main_async_recursive()
         return seastar::make_ready_future<>();
 }
 
+
+
+
+
+
 // synchronous: app_main starts 3 tasks and waits for when_all() then checks results and continue
 future<> app_main_sync_concurrent()
 {
+        std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
+
+        std::cout << "Initialize..." << std::endl;
+        init_base36_r2();
+
+        auto pi = std::make_unique<primesieve_iterator>();
+        primesieve_init(pi.get());
+
+        std::cout << "Start async processing..." << std::endl;
+
+        auto r0 = generate_primes(std::move(pi));
+
+        prime_buffer_t primes = std::move(r0.get0().first);
+        pi = std::move(r0.get0().second);
+
+        auto r1 = when_all(
+                generate_primes(std::move(pi)),
+                convert_base36(primes, char_buffer_t())
+                );
+
+        primes = std::move(std::get<0>(r1).get0().first);
+        convert_result_t cr = std::move(std::get<1>(r1).get0());
+
+        auto r2 = when_all(
+                generate_primes(std::move(gr.second)),
+                convert_base36(gr.first, cr.second),
+                palindrome15_search(cr.first, 0)
+                );
+
+        prime_gen_result_t gr = std::move(std::get<0>(r2).get0());
+        convert_result_t cr = std::move(std::get<1>(r2).get0());
+        search_result_t sr = std::move(std::get<2>(r2).get0());
+
+
         return seastar::make_ready_future<>();
 }
 
